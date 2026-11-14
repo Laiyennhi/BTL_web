@@ -6,8 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trang chủ | Hanoi Stay Nest</title>
-    <link rel="stylesheet" href="stylesheet/style.css" />
-</head>
+<link rel="stylesheet" href="stylesheet/style.css?v=2" /></head>
 <body>
     <form id="form1" runat="server" style="display: flex; flex-direction: column; min-height: 100vh;">
 
@@ -215,6 +214,77 @@
 
             document.addEventListener('click', function () {
                 closeAllMenus();
+            });
+        </script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                const grid = document.querySelector(".room-grid");
+                const dotsContainer = document.querySelector(".pagination-dots");
+                if (!grid || !dotsContainer) return;
+
+                const cards = Array.from(grid.querySelectorAll(".room-card"));
+                const perPage = 3; // Mỗi trang hiển thị 3 phòng
+                const totalPages = Math.max(1, Math.ceil(cards.length / perPage));
+                let currentPage = 0;
+                let autoSlideTimer;
+
+                // Tự động tạo đúng số dấu chấm tương ứng với số trang phòng
+                dotsContainer.innerHTML = "";
+                for (let i = 0; i < totalPages; i++) {
+                    const dot = document.createElement("span");
+                    dot.className = "dot" + (i === 0 ? " active" : "");
+                    dot.addEventListener("click", function () {
+                        goToPage(i);
+                        resetAutoSlide();
+                    });
+                    dotsContainer.appendChild(dot);
+                }
+
+                const dots = Array.from(dotsContainer.querySelectorAll(".dot"));
+
+                function renderPage(pageIndex) {
+                    cards.forEach((card, idx) => {
+                        const start = pageIndex * perPage;
+                        const end = start + perPage;
+                        card.style.display = (idx >= start && idx < end) ? "flex" : "none";
+                    });
+
+                    dots.forEach((d, idx) => {
+                        d.classList.toggle("active", idx === pageIndex);
+                    });
+                }
+
+                function goToPage(pageIndex) {
+                    if (pageIndex === currentPage || totalPages <= 1) return;
+                    grid.classList.add("slide-out");
+
+                    setTimeout(() => {
+                        currentPage = pageIndex;
+                        renderPage(currentPage);
+                        grid.classList.remove("slide-out");
+                    }, 250);
+                }
+
+                function startAutoSlide() {
+                    if (totalPages <= 1) return;
+                    autoSlideTimer = setInterval(() => {
+                        const nextPage = (currentPage + 1) % totalPages;
+                        goToPage(nextPage);
+                    }, 4000); // Tự động lướt sang trang tiếp theo sau mỗi 4 giây
+                }
+
+                function resetAutoSlide() {
+                    clearInterval(autoSlideTimer);
+                    startAutoSlide();
+                }
+
+                // Khởi tạo trang đầu tiên và bật chạy tự động
+                renderPage(0);
+                startAutoSlide();
+
+                // Tạm dừng tự động chạy khi người dùng di chuột vào thẻ phòng
+                grid.addEventListener("mouseenter", () => clearInterval(autoSlideTimer));
+                grid.addEventListener("mouseleave", startAutoSlide);
             });
         </script>
 

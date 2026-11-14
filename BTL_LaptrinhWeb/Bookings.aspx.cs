@@ -56,7 +56,7 @@ namespace BTL_Web
                            r.Title, r.Address, r.ImageUrl
                     FROM Bookings b
                     INNER JOIN Rooms r ON b.RoomID = r.RoomID
-                    WHERE b.UserID = @UserID";
+                    WHERE b.GuestID = @UserID";
 
                 if (filter == "PendingConfirm")
                 {
