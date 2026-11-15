@@ -11,6 +11,24 @@ namespace BTL_Web
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (Session["UserID"] != null)
+            {
+                string currentRole = Session["Role"] != null ? Session["Role"].ToString() : "Guest";
+                if (currentRole == "Admin")
+                {
+                    Response.Redirect("AdminDashboard.aspx?tab=users");
+                }
+                else if (currentRole == "Host")
+                {
+                    Response.Redirect("HostDashboard.aspx?tab=bookings");
+                }
+                else
+                {
+                    Response.Redirect("Account.aspx");
+                }
+                return;
+            }
+
             if (!IsPostBack)
             {
                 lblThongBao.Text = "";
@@ -30,8 +48,9 @@ namespace BTL_Web
 
             using (SqlConnection conn = new SqlConnection(strCon))
             {
-                // Kiểm tra xem Email và SĐT đã tồn tại trong bảng Users chưa
-                string query = "SELECT UserID, FullName FROM Users WHERE Email = @Email AND Phone = @Phone";
+                string query = @"SELECT UserID, FullName, ISNULL(Role, 'Guest') AS Role, 
+                                 ISNULL(Status, N'Hoạt động') AS Status, LockReason 
+                                 FROM Users WHERE Email = @Email AND Phone = @Phone";
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@Email", email);
                 cmd.Parameters.AddWithValue("@Phone", sdt);
@@ -43,16 +62,40 @@ namespace BTL_Web
 
                     if (reader.Read())
                     {
-                        // TRƯỜNG HỢP 1: Đã có tài khoản -> Lưu Session và chuyển về Trang chủ
+                        string status = reader["Status"].ToString();
+                        if (status == "Bị khóa")
+                        {
+                            string reason = reader["LockReason"] != DBNull.Value ? reader["LockReason"].ToString() : "Vi phạm quy định hệ thống";
+                            lblThongBao.Text = "Tài khoản của bạn đã bị khóa! Lý do: " + reason;
+                            return;
+                        }
+
+                        string role = reader["Role"].ToString();
+
                         Session["UserID"] = reader["UserID"].ToString();
                         Session["UserEmail"] = email;
-                        Session["FullName"] = reader["FullName"] != DBNull.Value ? reader["FullName"].ToString() : email.Split('@')[0];
+                        Session["Email"] = email;
+                        Session["Role"] = role;
+                        Session["FullName"] = reader["FullName"] != DBNull.Value && !string.IsNullOrWhiteSpace(reader["FullName"].ToString())
+                            ? reader["FullName"].ToString()
+                            : email.Split('@')[0];
 
-                        Response.Redirect("TrangChu.aspx");
+                        if (role == "Admin")
+                        {
+                            Response.Redirect("AdminDashboard.aspx?tab=users");
+                        }
+                        else if (role == "Host")
+                        {
+                            Response.Redirect("HostDashboard.aspx?tab=bookings");
+                        }
+                        else
+                        {
+                            Response.Redirect("Trangchu.aspx");
+                        }
                     }
                     else
                     {
-                        // TRƯỜNG HỢP 2: Chưa có tài khoản -> Lưu tạm Gmail & SĐT rồi chuyển sang trang OTP (Login.aspx)
+                        // Chưa có tài khoản -> Lưu tạm Gmail & SĐT rồi chuyển sang trang OTP (Login.aspx)
                         Session["Pending_Email"] = email;
                         Session["Pending_Phone"] = sdt;
 

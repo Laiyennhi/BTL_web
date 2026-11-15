@@ -13,6 +13,13 @@ namespace BTL_Web
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Chặn truy cập nếu chưa đăng nhập -> đẩy thẳng sang trang Đăng nhập (Profile.aspx)
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("Profile.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
                 LoadDanhSachYeuThich();
@@ -21,8 +28,9 @@ namespace BTL_Web
 
         private void LoadDanhSachYeuThich()
         {
-            // Lấy UserID đang đăng nhập (mặc định 1 nếu đang chạy test chưa qua Login)
-            int userId = Session["UserID"] != null ? Convert.ToInt32(Session["UserID"]) : 1;
+            if (Session["UserID"] == null) return;
+
+            int userId = Convert.ToInt32(Session["UserID"]);
 
             using (SqlConnection conn = new SqlConnection(strCon))
             {
@@ -31,6 +39,7 @@ namespace BTL_Web
                     FROM Favorites f
                     INNER JOIN Rooms r ON f.RoomID = r.RoomID
                     WHERE f.UserID = @UserID
+                      AND ISNULL(r.ApprovalStatus, N'Đang hoạt động') = N'Đang hoạt động'
                     ORDER BY f.FavoriteID DESC";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
@@ -64,9 +73,15 @@ namespace BTL_Web
         // Bấm vào nút tim đỏ để xóa phòng khỏi danh sách Yêu thích
         protected void rptFavorites_ItemCommand(object source, RepeaterCommandEventArgs e)
         {
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("Profile.aspx");
+                return;
+            }
+
             if (e.CommandName == "RemoveFavorite")
             {
-                int userId = Session["UserID"] != null ? Convert.ToInt32(Session["UserID"]) : 1;
+                int userId = Convert.ToInt32(Session["UserID"]);
                 int roomId = Convert.ToInt32(e.CommandArgument);
 
                 using (SqlConnection conn = new SqlConnection(strCon))

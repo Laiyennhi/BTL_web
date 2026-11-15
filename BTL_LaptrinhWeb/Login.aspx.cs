@@ -15,6 +15,16 @@ namespace BTL_Web
             if (!IsPostBack)
             {
                 lblThongBao.Text = "";
+
+                // Nếu chuyển từ Profile.aspx sang để đăng ký tài khoản mới thì điền sẵn Gmail & SĐT
+                if (Session["PendingRegisterEmail"] != null)
+                {
+                    txtGmail.Text = Session["PendingRegisterEmail"].ToString();
+                }
+                if (Session["PendingRegisterPhone"] != null)
+                {
+                    txtSDT.Text = Session["PendingRegisterPhone"].ToString();
+                }
             }
         }
 
@@ -31,11 +41,9 @@ namespace BTL_Web
                 return;
             }
 
-            // Sinh mã OTP 6 số
             Random rand = new Random();
             string otpCode = rand.Next(100000, 999999).ToString();
 
-            // Lưu thông tin vào Session (hiệu lực 5 phút)
             Session["OTP_Code"] = otpCode;
             Session["OTP_Email"] = email;
             Session["OTP_Phone"] = sdt;
@@ -45,7 +53,7 @@ namespace BTL_Web
             lblThongBao.Text = $"Mã xác nhận đã gửi tới {email}. (Mã test của bạn: {otpCode})";
         }
 
-        // Bước 2: Nhập mã OTP -> Bấm Đăng nhập -> Chuyển về Trang chủ
+        // Bước 2: Nhập mã OTP -> Bấm Đăng nhập -> Lưu DB & Gán đầy đủ Session
         protected void btnDangNhap_Click(object sender, EventArgs e)
         {
             string emailNhap = txtGmail.Text.Trim();
@@ -66,7 +74,6 @@ namespace BTL_Web
                 return;
             }
 
-            // Kiểm tra khớp Gmail, SĐT và Mã OTP
             if (emailNhap != Session["OTP_Email"].ToString() ||
                 sdtNhap != Session["OTP_Phone"].ToString() ||
                 otpNhap != Session["OTP_Code"].ToString())
@@ -76,26 +83,53 @@ namespace BTL_Web
                 return;
             }
 
-            // Lưu hoặc cập nhật tài khoản trong bảng Users (Database Home_Sharing)
-            int userId = LuuTaiKhoanVaoDB(emailNhap, sdtNhap);
+            string fullName = emailNhap.Split('@')[0];
+            string role = "Guest";
+            string lockError = "";
+
+            int userId = LuuTaiKhoanVaoDB(emailNhap, sdtNhap, ref fullName, ref role, ref lockError);
+
+            if (!string.IsNullOrEmpty(lockError))
+            {
+                lblThongBao.ForeColor = Color.Red;
+                lblThongBao.Text = lockError;
+                return;
+            }
 
             if (userId > 0)
             {
+                // Đồng bộ toàn bộ Session cho Header Popover & Phân quyền
                 Session["UserID"] = userId;
+                Session["Email"] = emailNhap;
                 Session["UserEmail"] = emailNhap;
+                Session["FullName"] = fullName;
+                Session["Role"] = role;
 
-                // Xóa Session OTP tạm
+                // Dọn dẹp Session tạm
                 Session.Remove("OTP_Code");
                 Session.Remove("OTP_Email");
                 Session.Remove("OTP_Phone");
                 Session.Remove("OTP_Expire");
+                Session.Remove("PendingRegisterEmail");
+                Session.Remove("PendingRegisterPhone");
 
-                // Chuyển thẳng đến Trang chủ
-                Response.Redirect("TrangChu.aspx");
+                // Điều hướng theo đúng phân quyền
+                if (role == "Admin")
+                {
+                    Response.Redirect("AdminDashboard.aspx?tab=users");
+                }
+                else if (role == "Host")
+                {
+                    Response.Redirect("HostDashboard.aspx?tab=bookings");
+                }
+                else
+                {
+                    Response.Redirect("TrangChu.aspx");
+                }
             }
         }
 
-        private int LuuTaiKhoanVaoDB(string email, string phone)
+        private int LuuTaiKhoanVaoDB(string email, string phone, ref string fullName, ref string role, ref string lockError)
         {
             using (SqlConnection conn = new SqlConnection(strCon))
             {
@@ -103,29 +137,52 @@ namespace BTL_Web
                 {
                     conn.Open();
 
-                    // Kiểm tra Email đã có trong database chưa
-                    string selectQuery = "SELECT UserID FROM Users WHERE Email = @Email";
+                    string selectQuery = @"
+                        SELECT UserID, FullName, ISNULL(Role, 'Guest') AS Role, 
+                               ISNULL(Status, N'Hoạt động') AS Status, LockReason 
+                        FROM Users WHERE Email = @Email";
                     SqlCommand cmdSelect = new SqlCommand(selectQuery, conn);
                     cmdSelect.Parameters.AddWithValue("@Email", email);
 
-                    object result = cmdSelect.ExecuteScalar();
-                    if (result != null)
+                    using (SqlDataReader rd = cmdSelect.ExecuteReader())
                     {
-                        int existingId = Convert.ToInt32(result);
-                        SqlCommand cmdUpdate = new SqlCommand("UPDATE Users SET Phone = @Phone WHERE UserID = @UserID", conn);
-                        cmdUpdate.Parameters.AddWithValue("@Phone", phone);
-                        cmdUpdate.Parameters.AddWithValue("@UserID", existingId);
-                        cmdUpdate.ExecuteNonQuery();
-                        return existingId;
+                        if (rd.Read())
+                        {
+                            string status = rd["Status"].ToString();
+                            if (status == "Bị khóa")
+                            {
+                                string reason = rd["LockReason"] != DBNull.Value ? rd["LockReason"].ToString() : "Vi phạm quy định hệ thống.";
+                                lockError = "Tài khoản của bạn đã bị khóa! Lý do: " + reason;
+                                return -1;
+                            }
+
+                            int existingId = Convert.ToInt32(rd["UserID"]);
+                            if (rd["FullName"] != DBNull.Value && !string.IsNullOrWhiteSpace(rd["FullName"].ToString()))
+                            {
+                                fullName = rd["FullName"].ToString();
+                            }
+                            role = rd["Role"].ToString();
+                            rd.Close();
+
+                            SqlCommand cmdUpdate = new SqlCommand("UPDATE Users SET Phone = @Phone WHERE UserID = @UserID", conn);
+                            cmdUpdate.Parameters.AddWithValue("@Phone", phone);
+                            cmdUpdate.Parameters.AddWithValue("@UserID", existingId);
+                            cmdUpdate.ExecuteNonQuery();
+                            return existingId;
+                        }
                     }
 
-                    // Nếu chưa có thì tạo mới hoàn toàn
-                    string insertQuery = "INSERT INTO Users (Email, FullName, Phone) OUTPUT INSERTED.UserID VALUES (@Email, @FullName, @Phone)";
+                    // Tạo tài khoản mới với vai trò mặc định là Guest và trạng thái Hoạt động
+                    string insertQuery = @"
+                        INSERT INTO Users (Email, FullName, Phone, Role, Status, CreatedAt) 
+                        OUTPUT INSERTED.UserID 
+                        VALUES (@Email, @FullName, @Phone, 'Guest', N'Hoạt động', GETDATE())";
                     SqlCommand cmdInsert = new SqlCommand(insertQuery, conn);
                     cmdInsert.Parameters.AddWithValue("@Email", email);
-                    cmdInsert.Parameters.AddWithValue("@FullName", email.Split('@')[0]);
+                    cmdInsert.Parameters.AddWithValue("@FullName", fullName);
                     cmdInsert.Parameters.AddWithValue("@Phone", phone);
 
+                    role = "Guest";
                     return Convert.ToInt32(cmdInsert.ExecuteScalar());
                 }
                 catch (Exception ex)

@@ -60,7 +60,6 @@ header {
             color: #d68c94;
         }
 
-        /* Chỉ hiện thanh gạch chân màu hồng pastel dưới mục menu đang active */
         .nav-menu li a.active::after {
             content: "";
             display: block;
@@ -80,7 +79,7 @@ header {
     display: inline-block;
 }
 
-/* ================= MAIN CONTENT (PROFILE) ================= */
+/* ================= MAIN CONTENT (PROFILE / ACCOUNT) ================= */
 main {
     flex: 1;
     display: flex;
@@ -186,7 +185,7 @@ footer {
     color: #888888;
 }
 
-/* ================= TRANG ĐĂNG NHẬP (LOGIN) ================= */
+/* ================= TRANG ĐĂNG NHẬP & HỒ SƠ (LOGIN / PROFILE / ACCOUNT) ================= */
 .login-main {
     flex: 1;
     display: flex;
@@ -243,33 +242,34 @@ footer {
 
 .login-input {
     width: 320px;
-    height: 40px;
-    border: 1px solid #d0d0d0;
-    border-radius: 20px;
+    height: 44px;
+    border: 1px solid #e2e2e2;
+    border-radius: 22px;
     padding: 0 20px;
     font-size: 16px;
+    color: #222222;
     background-color: #ffffff;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.14);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
     .login-input:focus {
         border-color: #f8b8be;
-        box-shadow: 0 3px 8px rgba(248, 184, 190, 0.6);
+        box-shadow: 0 4px 12px rgba(248, 184, 190, 0.45);
     }
 
 .btn-send-otp {
     width: 140px;
-    height: 40px;
+    height: 44px;
     background-color: #f8b8be;
     color: #ffffff;
     font-size: 18px;
-    font-weight: 500;
+    font-weight: 600;
     border: none;
-    border-radius: 20px;
+    border-radius: 22px;
     cursor: pointer;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.14);
+    box-shadow: 0 4px 12px rgba(248, 184, 190, 0.45);
     transition: background-color 0.2s, transform 0.1s;
 }
 
@@ -313,7 +313,7 @@ footer {
         transform: scale(0.98);
     }
 
-/* ================= TRANG CHỦ (DEFAULT / HOME) ================= */
+/* ================= TRANG CHỦ (TRANGCHU / HOME) ================= */
 .search-bar-container {
     display: flex;
     align-items: center;
@@ -323,12 +323,17 @@ footer {
     padding: 0 20px;
 }
 
-.search-select {
+.filter-box-wrapper {
+    position: relative;
     width: 280px;
+}
+
+.search-select {
+    width: 100%;
     height: 46px;
     border: 1px solid #d0d0d0;
     border-radius: 23px;
-    padding: 0 22px;
+    padding: 0 38px 0 22px;
     font-size: 18px;
     color: #777777;
     background-color: #ffffff;
@@ -336,10 +341,6 @@ footer {
     outline: none;
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 18px center;
-    background-size: 16px;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -347,6 +348,69 @@ footer {
         border-color: #f8b8be;
         box-shadow: 0 3px 8px rgba(248, 184, 190, 0.6);
     }
+
+.dropdown-arrow-btn {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #888888;
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.custom-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 52px;
+    left: 0;
+    width: 100%;
+    background-color: #ffffff;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 999;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+    .custom-dropdown-menu.show {
+        display: block;
+    }
+
+.dropdown-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    font-size: 16px;
+    color: #777777;
+    border-bottom: 1px solid #e6e6e6;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+    .dropdown-item-row:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item-row:hover {
+        background-color: #fff5f6;
+        color: #111111;
+    }
+
+.sort-arrow-icon {
+    font-size: 18px;
+    color: #666666;
+    font-weight: bold;
+}
 
 .btn-search-icon {
     width: 72px;
@@ -378,7 +442,13 @@ footer {
     width: 100%;
     margin: 0 auto;
     padding: 0 25px;
+    transition: opacity 0.35s ease, transform 0.35s ease;
 }
+
+    .room-grid.slide-out {
+        opacity: 0;
+        transform: translateX(-25px);
+    }
 
 .room-card {
     display: flex;
@@ -460,86 +530,24 @@ footer {
 }
 
 .dot {
-    width: 10px;
-    height: 10px;
+    width: 11px;
+    height: 11px;
     border-radius: 50%;
     background-color: #d9d9d9;
     cursor: pointer;
+    transition: all 0.25s ease;
 }
+
+    .dot:hover {
+        background-color: #f29ea6;
+        transform: scale(1.2);
+    }
 
     .dot.active {
         background-color: #f8b8be;
+        width: 24px;
+        border-radius: 6px;
     }
-
-/* ================= CUSTOM DROPDOWN TÌM KIẾM & LỌC GIÁ ================= */
-.filter-box-wrapper {
-    position: relative;
-    width: 280px;
-}
-
-    .filter-box-wrapper .search-select {
-        width: 100%;
-        padding-right: 40px;
-    }
-
-.dropdown-arrow-btn {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    color: #888888;
-    font-size: 14px;
-    cursor: pointer;
-    pointer-events: auto;
-}
-
-.custom-dropdown-menu {
-    display: none;
-    position: absolute;
-    top: 52px;
-    left: 0;
-    width: 100%;
-    background-color: #ffffff;
-    border: 1px solid #d0d0d0;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 999;
-    max-height: 280px;
-    overflow-y: auto;
-}
-
-    .custom-dropdown-menu.show {
-        display: block;
-    }
-
-.dropdown-item-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 18px;
-    font-size: 16px;
-    color: #777777;
-    border-bottom: 1px solid #e6e6e6;
-    cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
-}
-
-    .dropdown-item-row:last-child {
-        border-bottom: none;
-    }
-
-    .dropdown-item-row:hover {
-        background-color: #fff5f6;
-        color: #111111;
-    }
-
-.sort-arrow-icon {
-    font-size: 18px;
-    color: #666666;
-    font-weight: bold;
-}
 
 /* ================= CHI TIẾT PHÒNG (ROOM DETAIL) ================= */
 .detail-container {
@@ -1030,6 +1038,145 @@ footer {
         background-color: #f29ea6;
     }
 
+/* ================= POPOVER MENU AVATAR (GÓC PHẢI HEADER) ================= */
+.avatar-menu-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.header-avatar-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    overflow: hidden;
+    display: block;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+    .header-avatar-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 3px rgba(248, 184, 190, 0.55);
+    }
+
+.account-popover-menu {
+    display: none;
+    position: absolute;
+    top: 54px;
+    right: 0;
+    width: 265px;
+    background-color: #ffffff;
+    border: 1px solid #ebebeb;
+    border-radius: 16px;
+    padding: 8px 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    z-index: 2000;
+    text-align: left;
+}
+
+    .account-popover-menu.show {
+        display: block;
+        animation: fadeInPopover 0.16s ease-out;
+    }
+
+@keyframes fadeInPopover {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.popover-user-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: #111111;
+    transition: background-color 0.15s;
+}
+
+    .popover-user-header:hover {
+        background-color: #f7f7f7;
+    }
+
+.popover-mini-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background-color: #d68c94;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.popover-user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.popover-user-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: #111111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.popover-user-sub {
+    font-size: 12px;
+    color: #888888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.popover-chevron {
+    font-size: 18px;
+    color: #999999;
+    line-height: 1;
+}
+
+.popover-divider {
+    height: 1px;
+    background-color: #eeeeee;
+    margin: 6px 14px;
+}
+
+.popover-menu-row {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 11px 18px;
+    font-size: 14.5px;
+    color: #222222;
+    text-decoration: none;
+    transition: background-color 0.15s;
+}
+
+    .popover-menu-row:hover {
+        background-color: #f5f5f5;
+        color: #000000;
+    }
+
+    .popover-menu-row svg {
+        color: #333333;
+        flex-shrink: 0;
+    }
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 900px) {
     .room-grid {
@@ -1127,46 +1274,96 @@ footer {
         max-width: 320px;
     }
 }
-.filter-box-wrapper .search-select {
-    background-image: none !important;
-    padding-right: 38px;
+/* ================= KHU VỰC ĐỊA ĐIỂM PHỔ BIẾN (TRANG CHỦ) ================= */
+.popular-destinations-section {
+    max-width: 1050px;
+    width: 100%;
+    margin: 10px auto 65px auto;
+    padding: 0 25px;
 }
 
-.dropdown-arrow-btn {
-    right: 16px;
-    font-size: 15px;
-    color: #888888;
-    line-height: 1;
+.section-heading-row {
     display: flex;
-    align-items: center;
-    justify-content: center;
-}
-/* ================= SLIDER ĐỘNG CHO LƯỚI PHÒNG TRANG CHỦ ================= */
-.room-grid {
-    transition: opacity 0.35s ease, transform 0.35s ease;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 22px;
 }
 
-    .room-grid.slide-out {
-        opacity: 0;
-        transform: translateX(-25px);
-    }
+.section-heading-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #111111;
+}
 
-.dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    background-color: #d9d9d9;
+.section-heading-sub {
+    font-size: 14px;
+    color: #888888;
+    margin-top: 4px;
+}
+
+.destinations-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
+.destination-card {
+    position: relative;
+    height: 195px;
+    border-radius: 20px;
+    overflow: hidden;
     cursor: pointer;
-    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-    .dot:hover {
-        background-color: #f29ea6;
-        transform: scale(1.2);
+    .destination-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(214, 140, 148, 0.35);
     }
 
-    .dot.active {
-        background-color: #f8b8be;
-        width: 24px;
-        border-radius: 6px;
+    .destination-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.4s ease;
     }
+
+    .destination-card:hover img {
+        transform: scale(1.06);
+    }
+
+.destination-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.12) 60%, transparent 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 18px;
+    color: #ffffff;
+}
+
+.destination-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+.destination-desc {
+    font-size: 12.5px;
+    color: #f0f0f0;
+    opacity: 0.92;
+}
+
+@media (max-width: 900px) {
+    .destinations-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 520px) {
+    .destinations-grid {
+        grid-template-columns: 1fr;
+    }
+}

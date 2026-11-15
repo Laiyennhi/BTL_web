@@ -8,7 +8,6 @@ namespace BTL_Web
 {
     public partial class TrangChu : System.Web.UI.Page
     {
-        // Chuỗi kết nối tới database Home_Sharing
         string strCon = ConfigurationManager.ConnectionStrings["DefaultConnection"]?.ConnectionString
                         ?? @"Data Source=.;Initial Catalog=Home_Sharing;Integrated Security=True;TrustServerCertificate=True";
 
@@ -65,7 +64,6 @@ namespace BTL_Web
             }
         }
 
-
         // 3. Sự kiện bấm nút Kính lúp Tìm kiếm
         protected void btnTimKiem_Click(object sender, EventArgs e)
         {
@@ -79,15 +77,14 @@ namespace BTL_Web
             LoadDanhSachPhong();
         }
 
-        // 4. Lọc danh sách phòng theo Địa điểm và Sắp xếp Giá
         // 4. Lọc danh sách phòng theo Địa điểm (Hà Nội) và Sắp xếp Giá
         private void LoadDanhSachPhong()
         {
-            int userId = Session["UserID"] != null ? Convert.ToInt32(Session["UserID"]) : 1;
+            // Chưa đăng nhập thì userId = 0 (không hiện trạng thái đã thích của tài khoản khác)
+            int userId = Session["UserID"] != null ? Convert.ToInt32(Session["UserID"]) : 0;
             string diaDiem = txtDiaDiem.Text.Trim();
             string dieuKienGia = hfSapXepGia.Value;
 
-            // Dự phòng trường hợp HiddenField bị rỗng thì đọc theo Text hiển thị
             if (string.IsNullOrEmpty(dieuKienGia))
             {
                 if (txtHienThiGia.Text == "Từ cao xuống thấp") dieuKienGia = "DESC";
@@ -98,29 +95,29 @@ namespace BTL_Web
 
             using (SqlConnection conn = new SqlConnection(strCon))
             {
+                // Chỉ hiển thị các phòng đã được duyệt hoạt động
                 string query = @"
-            SELECT r.RoomID, r.Title, r.District, r.PricePerNight, r.ImageUrl,
-                   CASE WHEN f.FavoriteID IS NOT NULL THEN 1 ELSE 0 END AS IsLiked
-            FROM Rooms r
-            LEFT JOIN Favorites f ON r.RoomID = f.RoomID AND f.UserID = @UserID
-            WHERE r.Status = 'Available'";
+                    SELECT r.RoomID, r.Title, r.District, r.PricePerNight, r.ImageUrl,
+                           CASE WHEN f.FavoriteID IS NOT NULL THEN 1 ELSE 0 END AS IsLiked
+                    FROM Rooms r
+                    LEFT JOIN Favorites f ON r.RoomID = f.RoomID AND f.UserID = @UserID
+                    WHERE ISNULL(r.ApprovalStatus, N'Đang hoạt động') = N'Đang hoạt động'
+                      AND ISNULL(r.IsAvailable, 1) = 1";
 
                 string tuKhoaTim = "";
 
-                // 1. Nối điều kiện lọc Địa điểm Hà Nội vào chuỗi query
                 if (!string.IsNullOrEmpty(diaDiem))
                 {
                     tuKhoaTim = diaDiem;
                     if (diaDiem.Contains("-"))
                     {
                         string[] parts = diaDiem.Split('-');
-                        tuKhoaTim = parts[0].Trim(); // Lấy tên phố/khu vực cụ thể
+                        tuKhoaTim = parts[0].Trim();
                     }
 
                     query += " AND (r.District LIKE @Keyword OR r.Address LIKE @Keyword OR r.Title LIKE @Keyword)";
                 }
 
-                // 2. Nối điều kiện lọc theo khoảng giá (nếu có)
                 if (dieuKienGia == "UNDER_700")
                 {
                     query += " AND r.PricePerNight < 700000";
@@ -130,7 +127,6 @@ namespace BTL_Web
                     query += " AND r.PricePerNight >= 700000";
                 }
 
-                // 3. Nối điều kiện sắp xếp giá
                 if (dieuKienGia == "DESC")
                 {
                     query += " ORDER BY r.PricePerNight DESC";
@@ -144,7 +140,6 @@ namespace BTL_Web
                     query += " ORDER BY r.CreatedAt DESC";
                 }
 
-                // 4. Khởi tạo SqlCommand SAU KHI đã ghép xong toàn bộ chuỗi query
                 SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@UserID", userId);
 
@@ -176,9 +171,10 @@ namespace BTL_Web
         {
             if (e.CommandName == "ToggleFavorite")
             {
+                // Chưa đăng nhập -> đẩy về trang Đăng nhập (Profile.aspx)
                 if (Session["UserID"] == null)
                 {
-                    Response.Redirect("Login.aspx");
+                    Response.Redirect("Profile.aspx");
                     return;
                 }
 

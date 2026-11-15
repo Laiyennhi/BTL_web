@@ -6,14 +6,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chi tiết phòng | Hanoi Stay Nest</title>
-    <link rel="stylesheet" href="stylesheet/style.css" />
+    <link rel="stylesheet" href="stylesheet/style.css?v=6" />
 </head>
 <body>
     <form id="form1" runat="server" style="display: flex; flex-direction: column; min-height: 100vh;">
 
-        <!-- HEADER -->
+        <!-- HEADER ĐÃ ĐỒNG BỘ PHÂN QUYỀN -->
         <header>
-            <a href="TrangChu.aspx" class="logo-box">
+            <a href="Trangchu.aspx" class="logo-box">
                 <svg width="65" height="32" viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 30L40 8L70 30" stroke="#D68C94" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M22 25L45 14L62 28" stroke="#D68C94" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -24,18 +24,87 @@
             </a>
 
             <ul class="nav-menu">
-                <li><a href="TrangChu.aspx" class="active">Trang chủ</a></li>
-                <li><a href="Favorites.aspx">Yêu Thích</a></li>
-                <li><a href="Bookings.aspx">Hoạt động</a></li>
+                <li><a href="Trangchu.aspx" class="active">Trang chủ</a></li>
+                <% if (Session["UserID"] != null) { %>
+                    <li><a href="Favorites.aspx">Yêu Thích</a></li>
+                    <li><a href="Bookings.aspx">Hoạt động</a></li>
+                <% } else { %>
+                    <li><a href="Profile.aspx">Yêu Thích</a></li>
+                    <li><a href="Profile.aspx">Hoạt động</a></li>
+                <% } %>
             </ul>
 
-            <a href="Profile.aspx" class="header-avatar" title="Hồ sơ cá nhân">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="50" fill="#F8B8BE"/>
-                    <circle cx="50" cy="38" r="17" fill="#FFFFFF"/>
-                    <path d="M20 88C20 68 33 58 50 58C67 58 80 68 80 88" fill="#FFFFFF"/>
-                </svg>
-            </a>
+            <!-- CỤM AVATAR & POPOVER MENU TÀI KHOẢN -->
+            <div class="avatar-menu-wrapper">
+                <button type="button" class="header-avatar-btn" onclick="toggleAccountMenu(event)" title="Tài khoản">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="50" fill="#F8B8BE"/>
+                        <circle cx="50" cy="38" r="17" fill="#FFFFFF"/>
+                        <path d="M20 88C20 68 33 58 50 58C67 58 80 68 80 88" fill="#FFFFFF"/>
+                    </svg>
+                </button>
+
+                <div id="accountPopover" class="account-popover-menu">
+                    <% if (Session["UserID"] != null) { %>
+                        <a href="Account.aspx" class="popover-user-header">
+                            <div class="popover-mini-avatar">
+                                <%= (Session["FullName"] != null && Session["FullName"].ToString().Length > 0)
+                                    ? Session["FullName"].ToString().Substring(0, 1).ToUpper() : "U" %>
+                            </div>
+                            <div class="popover-user-info">
+                                <div class="popover-user-name"><%= Session["FullName"] ?? "Thành viên" %></div>
+                                <div class="popover-user-sub"><%= Session["Email"] ?? Session["UserEmail"] ?? "Khách thuê phòng" %></div>
+                            </div>
+                            <span class="popover-chevron">›</span>
+                        </a>
+
+                        <div class="popover-divider"></div>
+
+                        <a href="Account.aspx" class="popover-menu-row"><span>👤 Thông tin cá nhân</span></a>
+                        <a href="Bookings.aspx" class="popover-menu-row"><span>📅 Hoạt động đặt phòng</span></a>
+                        <a href="Favorites.aspx" class="popover-menu-row"><span>❤️ Danh sách yêu thích</span></a>
+
+                        <div class="popover-divider"></div>
+
+                        <% 
+                            string currentRole = Session["Role"] != null ? Session["Role"].ToString() : "Guest";
+                            if (currentRole == "Admin") { 
+                        %>
+                            <a href="AdminDashboard.aspx?tab=users" class="popover-menu-row" style="color: #b83b5e; font-weight: 600;">
+                                <span>🛡️ Quản trị hệ thống (Admin)</span>
+                            </a>
+                        <% } else if (currentRole == "Host") { %>
+                            <a href="HostDashboard.aspx?tab=bookings" class="popover-menu-row" style="color: #d66b76; font-weight: 600;">
+                                <span>📋 Kênh Chủ phòng (Đơn đặt)</span>
+                            </a>
+                            <a href="HostDashboard.aspx?tab=rooms" class="popover-menu-row">
+                                <span>🏠 Phòng của tôi</span>
+                            </a>
+                        <% } else { %>
+                            <a href="DangKyHost.aspx" class="popover-menu-row" style="color: #d66b76; font-weight: 500;">
+                                <span>🏠 Đăng ký làm Host</span>
+                            </a>
+                        <% } %>
+
+                        <div class="popover-divider"></div>
+
+                        <a href="#" class="popover-menu-row"><span style="flex:1;">🛟 Trợ giúp</span><span class="popover-chevron">›</span></a>
+                        <a href="Logout.aspx" class="popover-menu-row" onclick="return confirm('Bạn có chắc chắn muốn đăng xuất?');"><span>🚪 Đăng xuất</span></a>
+                    <% } else { %>
+                        <div class="popover-user-header" style="cursor: default;">
+                            <div class="popover-mini-avatar" style="background-color: #f8b8be;">?</div>
+                            <div class="popover-user-info">
+                                <div class="popover-user-name">Khách</div>
+                                <div class="popover-user-sub">Chưa đăng nhập</div>
+                            </div>
+                        </div>
+                        <div class="popover-divider"></div>
+                        <a href="Profile.aspx" class="popover-menu-row"><span>🔑 <strong>Đăng nhập / Đăng ký</strong></span></a>
+                        <div class="popover-divider"></div>
+                        <a href="#" class="popover-menu-row"><span style="flex:1;">🛟 Trợ giúp</span><span class="popover-chevron">›</span></a>
+                    <% } %>
+                </div>
+            </div>
         </header>
 
         <!-- MAIN CONTENT -->
@@ -117,7 +186,7 @@
                     </div>
                 </div>
 
-                <!-- Cột phải: Card đặt phòng (Chuyển đổi trạng thái theo từng bước) -->
+                <!-- Cột phải: Card đặt phòng -->
                 <div>
                     <!-- TRẠNG THÁI 1: Form chọn ngày & tính tiền -->
                     <asp:Panel ID="pnlBookingForm" runat="server" CssClass="booking-card">
@@ -151,7 +220,7 @@
                         <button type="button" class="btn-book-red" onclick="moPopupThanhToan()">Đặt Phòng</button>
                     </asp:Panel>
 
-                    <!-- TRẠNG THÁI 2: Màn hình quét mã QR (Desktop - 6) -->
+                    <!-- TRẠNG THÁI 2: Màn hình quét mã QR -->
                     <asp:Panel ID="pnlQRPayment" runat="server" CssClass="booking-card" Visible="false" style="text-align: center;">
                         <asp:LinkButton ID="btnCloseQR" runat="server" CssClass="modal-close-btn" OnClick="btnQuayLaiForm_Click">X</asp:LinkButton>
                         <div style="font-size: 16px; font-weight: 500; margin-bottom: 16px;">Quét mã bằng ngân hàng bạn chọn</div>
@@ -171,7 +240,7 @@
                         <div style="font-size: 12px; color: #666;">Vui lòng thanh toán trước 24h. Quá hạn đơn sẽ tự hủy</div>
                     </asp:Panel>
 
-                    <!-- TRẠNG THÁI 3: Màn hình thanh toán trực tiếp (Desktop - 8) -->
+                    <!-- TRẠNG THÁI 3: Màn hình thanh toán trực tiếp -->
                     <asp:Panel ID="pnlDirectPayment" runat="server" CssClass="booking-card" Visible="false">
                         <asp:LinkButton ID="btnCloseDirect" runat="server" CssClass="modal-close-btn" OnClick="btnQuayLaiForm_Click">X</asp:LinkButton>
                         <div style="font-size: 16px; line-height: 1.5; margin-bottom: 18px; padding-right: 20px;">
@@ -184,14 +253,14 @@
                         <asp:Button ID="btnGuiYeuCauDirect" runat="server" Text="Gửi yêu cầu đặt phòng" CssClass="btn-check-avail" OnClick="btnGuiYeuCauDirect_Click" />
                     </asp:Panel>
 
-                    <!-- TRẠNG THÁI 4: Đang chờ xác nhận (Desktop - 7 & 10) -->
+                    <!-- TRẠNG THÁI 4: Đang chờ xác nhận -->
                     <asp:Panel ID="pnlPendingConfirm" runat="server" CssClass="booking-card" Visible="false" style="text-align: center; padding: 35px 25px;">
                         <div style="font-size: 42px; margin-bottom: 12px;">🕒</div>
                         <div style="font-size: 18px; font-weight: 600; margin-bottom: 10px;">Đang chờ xác nhận</div>
                         <div style="font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 22px;">
                             <asp:Label ID="lblPendingMessage" runat="server"></asp:Label>
                         </div>
-                        <a href="TrangChu.aspx" class="btn-check-avail" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; width: 70%;">
+                        <a href="Trangchu.aspx" class="btn-check-avail" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; width: 70%;">
                             Về trang chủ
                         </a>
                     </asp:Panel>
@@ -201,16 +270,16 @@
         </main>
 
         <!-- POPUP 1: Thông báo kiểm tra tình trạng phòng -->
-            <div id="modalCheckStatus" runat="server" EnableViewState="false" class="modal-overlay">
-                <div class="modal-box" style="text-align: center; padding: 40px 25px;">
-                    <div style="font-size: 18px; color: #222; margin-bottom: 35px; line-height: 1.5;">
-                        <asp:Label ID="lblStatusResult" runat="server" EnableViewState="false"></asp:Label>
-                    </div>
-                    <button type="button" class="btn-book-red" style="width: 110px;" onclick="dongModal('<%= modalCheckStatus.ClientID %>')">OK</button>
+        <div id="modalCheckStatus" runat="server" EnableViewState="false" class="modal-overlay">
+            <div class="modal-box" style="text-align: center; padding: 40px 25px;">
+                <div style="font-size: 18px; color: #222; margin-bottom: 35px; line-height: 1.5;">
+                    <asp:Label ID="lblStatusResult" runat="server" EnableViewState="false"></asp:Label>
                 </div>
+                <button type="button" class="btn-book-red" style="width: 110px;" onclick="dongModal('<%= modalCheckStatus.ClientID %>')">OK</button>
             </div>
+        </div>
 
-        <!-- POPUP 2: Chọn phương thức thanh toán (Desktop - 5) -->
+        <!-- POPUP 2: Chọn phương thức thanh toán -->
         <div id="modalPaymentMethod" class="modal-overlay">
             <div class="modal-box">
                 <button type="button" class="modal-close-btn" onclick="dongModal('modalPaymentMethod')">X</button>
@@ -228,13 +297,12 @@
             </div>
         </div>
 
-        <!-- HiddenField lưu đơn giá phòng phục vụ tính tiền bằng JS -->
         <asp:HiddenField ID="hfUnitPrice" runat="server" Value="0" />
         <asp:HiddenField ID="hfCalculatedTotal" runat="server" Value="0" />
 
         <!-- FOOTER -->
         <footer>
-            <a href="TrangChu.aspx" class="logo-box">
+            <a href="Trangchu.aspx" class="logo-box">
                 <svg width="65" height="32" viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 30L40 8L70 30" stroke="#D68C94" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M22 25L45 14L62 28" stroke="#D68C94" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -252,7 +320,53 @@
         </footer>
 
         <script>
+            var isLoggedIn = <%= Session["UserID"] != null ? "true" : "false" %>;
+
+            function toggleAccountMenu(event) {
+                event.stopPropagation();
+                var menu = document.getElementById("accountPopover");
+                if (menu) menu.classList.toggle("show");
+            }
+
+            document.addEventListener("click", function (e) {
+                var menu = document.getElementById("accountPopover");
+                var wrapper = document.querySelector(".avatar-menu-wrapper");
+                if (menu && wrapper && !wrapper.contains(e.target)) {
+                    menu.classList.remove("show");
+                }
+            });
+
+            function getTodayString() {
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dd = String(today.getDate()).padStart(2, '0');
+                return yyyy + '-' + mm + '-' + dd;
+            }
+
+            function thietLapGioiHanNgay() {
+                var todayStr = getTodayString();
+                var chkIn = document.getElementById('<%= txtCheckIn.ClientID %>');
+                var chkOut = document.getElementById('<%= txtCheckOut.ClientID %>');
+
+                chkIn.setAttribute('min', todayStr);
+                chkOut.setAttribute('min', todayStr);
+
+                if (chkIn.value) {
+                    var nextDay = new Date(chkIn.value);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    var minOutStr = nextDay.toISOString().split('T')[0];
+                    chkOut.setAttribute('min', minOutStr);
+
+                    if (chkOut.value && chkOut.value <= chkIn.value) {
+                        chkOut.value = minOutStr;
+                    }
+                }
+            }
+
             function tinhTienPhong() {
+                thietLapGioiHanNgay();
+
                 var price = parseFloat(document.getElementById('<%= hfUnitPrice.ClientID %>').value) || 0;
                 var d1 = document.getElementById('<%= txtCheckIn.ClientID %>').value;
                 var d2 = document.getElementById('<%= txtCheckOut.ClientID %>').value;
@@ -273,81 +387,15 @@
             }
 
             function moPopupThanhToan() {
-    var d1 = document.getElementById('<%= txtCheckIn.ClientID %>').value;
-    var d2 = document.getElementById('<%= txtCheckOut.ClientID %>').value;
-    if (!d1 || !d2 || new Date(d2) <= new Date(d1)) {
-        alert('Vui lòng chọn ngày Nhận phòng và Trả phòng hợp lệ (ngày trả phải sau ngày nhận)!');
-        return;
-    }
-    document.getElementById('modalPaymentMethod').classList.add('active');
-}
-
-function dongModal(id) {
-    document.getElementById(id).classList.remove('active');
-}
-
-window.onload = function() {
-    tinhTienPhong();
-            };
-        </script>
-        <script>
-            // Hàm lấy chuỗi ngày chuẩn YYYY-MM-DD theo giờ địa phương
-            function getTodayString() {
-                var today = new Date();
-                var yyyy = today.getFullYear();
-                var mm = String(today.getMonth() + 1).padStart(2, '0');
-                var dd = String(today.getDate()).padStart(2, '0');
-                return yyyy + '-' + mm + '-' + dd;
-            }
-
-            // Khóa không cho bấm chọn ngày quá khứ trên lịch ngay khi mở trang
-            function thietLapGioiHanNgay() {
-                var todayStr = getTodayString();
-                var chkIn = document.getElementById('<%= txtCheckIn.ClientID %>');
-        var chkOut = document.getElementById('<%= txtCheckOut.ClientID %>');
-
-                chkIn.setAttribute('min', todayStr);
-                chkOut.setAttribute('min', todayStr);
-
-                // Nếu đã chọn ngày nhận phòng thì ngày trả tối thiểu phải là ngày kế tiếp
-                if (chkIn.value) {
-                    var nextDay = new Date(chkIn.value);
-                    nextDay.setDate(nextDay.getDate() + 1);
-                    var minOutStr = nextDay.toISOString().split('T')[0];
-                    chkOut.setAttribute('min', minOutStr);
-
-                    if (chkOut.value && chkOut.value <= chkIn.value) {
-                        chkOut.value = minOutStr;
-                    }
+                // Nếu chưa đăng nhập -> đẩy thẳng sang trang Đăng nhập (Profile.aspx)
+                if (!isLoggedIn) {
+                    window.location.href = 'Profile.aspx';
+                    return;
                 }
-            }
 
-            function tinhTienPhong() {
-                thietLapGioiHanNgay();
-
-                var price = parseFloat(document.getElementById('<%= hfUnitPrice.ClientID %>').value) || 0;
-        var d1 = document.getElementById('<%= txtCheckIn.ClientID %>').value;
-        var d2 = document.getElementById('<%= txtCheckOut.ClientID %>').value;
-
-        var nights = 0;
-        if (d1 && d2) {
-            var date1 = new Date(d1);
-            var date2 = new Date(d2);
-            var diff = (date2 - date1) / (1000 * 60 * 60 * 24);
-            if (diff > 0) nights = diff;
-        }
-
-        var total = price * nights;
-        document.getElementById('<%= hfCalculatedTotal.ClientID %>').value = total;
-        document.getElementById('lblCalcFormula').innerText = price.toLocaleString('vi-VN') + ' đ x ' + nights + ' đêm';
-        document.getElementById('lblSubTotal').innerText = total.toLocaleString('vi-VN') + ' đ';
-        document.getElementById('lblGrandTotal').innerText = total.toLocaleString('vi-VN') + ' đ';
-    }
-
-    function moPopupThanhToan() {
-        var todayStr = getTodayString();
-        var d1 = document.getElementById('<%= txtCheckIn.ClientID %>').value;
-        var d2 = document.getElementById('<%= txtCheckOut.ClientID %>').value;
+                var todayStr = getTodayString();
+                var d1 = document.getElementById('<%= txtCheckIn.ClientID %>').value;
+                var d2 = document.getElementById('<%= txtCheckOut.ClientID %>').value;
 
                 if (!d1 || !d2) {
                     alert('Vui lòng chọn đầy đủ ngày Nhận phòng và Trả phòng!');

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Configuration;
 using System.Data.SqlClient;
-using System.Web.UI.HtmlControls;
 
 namespace BTL_Web
 {
@@ -12,7 +11,6 @@ namespace BTL_Web
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            // Ép tắt popup kiểm tra phòng ở mọi lần PostBack
             modalCheckStatus.Attributes["class"] = "modal-overlay";
             lblStatusResult.Text = "";
 
@@ -89,9 +87,15 @@ namespace BTL_Web
             }
         }
 
-        // Kiểm tra tình trạng phòng trống theo khoảng ngày chọn (Desktop - 4)
+        // Chặn kiểm tra tình trạng phòng nếu chưa đăng nhập
         protected void btnKiemTraPhong_Click(object sender, EventArgs e)
         {
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("Profile.aspx");
+                return;
+            }
+
             DateTime checkIn, checkOut;
             if (!DateTime.TryParse(txtCheckIn.Text, out checkIn) || !DateTime.TryParse(txtCheckOut.Text, out checkOut))
             {
@@ -124,12 +128,11 @@ namespace BTL_Web
             {
                 using (SqlConnection conn = new SqlConnection(strCon))
                 {
-                    // Kiểm tra trùng lịch trong bảng Bookings
                     string query = @"
-                SELECT COUNT(*) FROM Bookings 
-                WHERE RoomID = @RoomID 
-                  AND Status IN ('Pending', 'Confirmed')
-                  AND (@CheckIn < CheckOutDate AND @CheckOut > CheckInDate)";
+                        SELECT COUNT(*) FROM Bookings 
+                        WHERE RoomID = @RoomID 
+                          AND Status IN ('Pending', 'Unpaid', 'Confirmed')
+                          AND (@CheckIn < CheckOutDate AND @CheckOut > CheckInDate)";
 
                     SqlCommand cmd = new SqlCommand(query, conn);
                     cmd.Parameters.AddWithValue("@RoomID", roomId);
@@ -151,17 +154,21 @@ namespace BTL_Web
             }
             catch (Exception ex)
             {
-                // Hiển thị chi tiết nếu tên cột ngày trong SQL Server khác với CheckInDate / CheckOutDate
                 lblStatusResult.Text = "Lỗi kiểm tra dữ liệu: " + ex.Message;
             }
 
             modalCheckStatus.Attributes["class"] = "modal-overlay active";
         }
 
-        // Chuyển sang giao diện thanh toán mã QR (Desktop - 6)
+        // Chuyển sang giao diện thanh toán mã QR
         protected void btnChonQR_Click(object sender, EventArgs e)
         {
-            // Đảm bảo tắt hẳn popup kiểm tra phòng
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("Profile.aspx");
+                return;
+            }
+
             modalCheckStatus.Attributes["class"] = "modal-overlay";
 
             decimal total = TinhTongTienServer();
@@ -177,9 +184,15 @@ namespace BTL_Web
             pnlQRPayment.Visible = true;
         }
 
-        // Chuyển sang giao diện thanh toán trực tiếp (Desktop - 8)
+        // Chuyển sang giao diện thanh toán trực tiếp
         protected void btnChonDirect_Click(object sender, EventArgs e)
         {
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("Profile.aspx");
+                return;
+            }
+
             decimal total = TinhTongTienServer();
             lblDirectTongTien.Text = total.ToString("N0") + " đ";
 
@@ -189,7 +202,6 @@ namespace BTL_Web
             pnlDirectPayment.Visible = true;
         }
 
-        // Nút X đóng bảng thanh toán quay lại form đặt phòng
         protected void btnQuayLaiForm_Click(object sender, EventArgs e)
         {
             pnlQRPayment.Visible = false;
@@ -198,19 +210,23 @@ namespace BTL_Web
             pnlBookingForm.Visible = true;
         }
 
-        // Hoàn tất đặt phòng qua QR (Desktop - 7)
+        // Hoàn tất đặt phòng qua QR
         protected void btnXacNhanQR_Click(object sender, EventArgs e)
         {
-            LuuDonDatPhong("QR");
+            if (Session["UserID"] == null) { Response.Redirect("Profile.aspx"); return; }
+
+            LuuDonDatPhong("QR", "Unpaid");
             lblPendingMessage.Text = "Shop đang kiểm tra giao dịch của bạn. Vui lòng chờ xác nhận thanh toán";
             pnlQRPayment.Visible = false;
             pnlPendingConfirm.Visible = true;
         }
 
-        // Hoàn tất đặt phòng thanh toán trực tiếp (Desktop - 10)
+        // Hoàn tất đặt phòng thanh toán trực tiếp
         protected void btnGuiYeuCauDirect_Click(object sender, EventArgs e)
         {
-            LuuDonDatPhong("Direct");
+            if (Session["UserID"] == null) { Response.Redirect("Profile.aspx"); return; }
+
+            LuuDonDatPhong("Trực tiếp", "Pending");
             lblPendingMessage.Text = "Shop đang kiểm tra đơn đặt hàng. Vui lòng chờ shop xác nhận";
             pnlDirectPayment.Visible = false;
             pnlPendingConfirm.Visible = true;
@@ -225,13 +241,10 @@ namespace BTL_Web
             return nights > 0 ? unitPrice * nights : 0;
         }
 
-        private void LuuDonDatPhong(string paymentMethod)
+        private void LuuDonDatPhong(string paymentMethod, string bookingStatus)
         {
-            if (Session["UserID"] == null)
-            {
-                Response.Redirect("Login.aspx");
-                return;
-            }
+            int guestId = Convert.ToInt32(Session["UserID"]);
+            int roomId = Convert.ToInt32(ViewState["RoomID"]);
 
             DateTime checkIn, checkOut;
             if (!DateTime.TryParse(txtCheckIn.Text, out checkIn) || !DateTime.TryParse(txtCheckOut.Text, out checkOut)
@@ -242,16 +255,35 @@ namespace BTL_Web
                 return;
             }
 
-            // ... (Phần lệnh INSERT INTO Bookings giữ nguyên)
+            decimal totalPrice = TinhTongTienServer();
+
+            using (SqlConnection conn = new SqlConnection(strCon))
+            {
+                string sql = @"INSERT INTO Bookings (RoomID, GuestID, CheckInDate, CheckOutDate, TotalPrice, Status, PaymentMethod, CreatedAt)
+                               VALUES (@RoomID, @GuestID, @CheckIn, @CheckOut, @Total, @Status, @PayMethod, GETDATE())";
+                SqlCommand cmd = new SqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@RoomID", roomId);
+                cmd.Parameters.AddWithValue("@GuestID", guestId);
+                cmd.Parameters.AddWithValue("@CheckIn", checkIn.Date);
+                cmd.Parameters.AddWithValue("@CheckOut", checkOut.Date);
+                cmd.Parameters.AddWithValue("@Total", totalPrice);
+                cmd.Parameters.AddWithValue("@Status", bookingStatus);
+                cmd.Parameters.AddWithValue("@PayMethod", paymentMethod);
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
         }
 
+        // Chặn thả tim nếu chưa đăng nhập
         protected void btnHeartDetail_Click(object sender, EventArgs e)
         {
             if (Session["UserID"] == null)
             {
-                Response.Redirect("Login.aspx");
+                Response.Redirect("Profile.aspx");
                 return;
             }
+
             int userId = Convert.ToInt32(Session["UserID"]);
             int roomId = Convert.ToInt32(ViewState["RoomID"]);
 

@@ -13,6 +13,13 @@ namespace BTL_Web
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // Chặn truy cập nếu chưa đăng nhập -> đẩy về trang Đăng nhập (Profile.aspx)
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("Profile.aspx");
+                return;
+            }
+
             if (!IsPostBack)
             {
                 ViewState["CurrentFilter"] = "ALL";
@@ -24,6 +31,12 @@ namespace BTL_Web
 
         protected void FilterTab_Click(object sender, EventArgs e)
         {
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("Profile.aspx");
+                return;
+            }
+
             LinkButton clickedTab = (LinkButton)sender;
             string filter = clickedTab.CommandArgument;
 
@@ -44,7 +57,9 @@ namespace BTL_Web
 
         private void LoadDanhSachHoatDong(string filter)
         {
-            int userId = Session["UserID"] != null ? Convert.ToInt32(Session["UserID"]) : 1;
+            if (Session["UserID"] == null) return;
+
+            int userId = Convert.ToInt32(Session["UserID"]);
             int payingId = ViewState["PayingBookingID"] != null ? Convert.ToInt32(ViewState["PayingBookingID"]) : 0;
             int justPaidId = ViewState["JustPaidBookingID"] != null ? Convert.ToInt32(ViewState["JustPaidBookingID"]) : 0;
 
@@ -60,11 +75,11 @@ namespace BTL_Web
 
                 if (filter == "PendingConfirm")
                 {
-                    query += " AND (b.Status = 'PendingConfirm' OR (b.Status = 'Pending' AND ISNULL(b.PaymentMethod, 'Direct') = 'Direct'))";
+                    query += " AND (b.Status = 'PendingConfirm' OR (b.Status = 'Pending' AND ISNULL(b.PaymentMethod, 'Direct') <> 'QR'))";
                 }
                 else if (filter == "PendingPayment")
                 {
-                    query += " AND b.Status = 'Pending' AND b.PaymentMethod = 'QR'";
+                    query += " AND (b.Status = 'Unpaid' OR (b.Status = 'Pending' AND b.PaymentMethod = 'QR'))";
                 }
                 else if (filter == "Confirmed")
                 {
@@ -123,7 +138,7 @@ namespace BTL_Web
                         string badgeClass = "badge-yellow";
                         bool showPay = false, showCancel = false, showRebook = false;
 
-                        if (status == "Pending" && method == "QR")
+                        if (status == "Unpaid" || (status == "Pending" && method == "QR"))
                         {
                             statusLabel = "Chờ thanh toán";
                             badgeClass = "badge-yellow";
@@ -177,6 +192,12 @@ namespace BTL_Web
 
         protected void rptBookings_ItemCommand(object source, RepeaterCommandEventArgs e)
         {
+            if (Session["UserID"] == null)
+            {
+                Response.Redirect("Profile.aspx");
+                return;
+            }
+
             string currentFilter = ViewState["CurrentFilter"]?.ToString() ?? "ALL";
 
             if (e.CommandName == "OpenQR")
@@ -194,7 +215,6 @@ namespace BTL_Web
                 int bookingId = Convert.ToInt32(e.CommandArgument);
                 using (SqlConnection conn = new SqlConnection(strCon))
                 {
-                    // Cập nhật sang PendingConfirm (Chờ shop xác nhận giao dịch)
                     SqlCommand cmd = new SqlCommand("UPDATE Bookings SET Status = 'PendingConfirm' WHERE BookingID = @ID", conn);
                     cmd.Parameters.AddWithValue("@ID", bookingId);
                     conn.Open();
