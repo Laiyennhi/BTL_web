@@ -456,3 +456,76 @@ body {
     margin: 0 10px;
     font-size: 14px;
 }
+.host-avatar-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.host-avatar-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    display: block;
+}
+
+.host-popover-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 54px;
+    width: 260px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.14);
+    border: 1px solid #f0e4e6;
+    z-index: 9999;
+    padding: 10px 0;
+}
+
+    .host-popover-menu.show {
+        display: block;
+    }
+
+.host-popover-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    text-decoration: none;
+}
+
+.host-mini-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #f8b8be;
+    color: #fff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.host-popover-divider {
+    height: 1px;
+    background: #f2f2f2;
+    margin: 6px 0;
+}
+
+.host-popover-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #333;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+    .host-popover-row:hover {
+        background: #fff5f6;
+    }

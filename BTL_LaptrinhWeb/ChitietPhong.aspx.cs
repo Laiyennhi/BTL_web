@@ -63,9 +63,9 @@ namespace BTL_Web
                         lblPricePerNight.Text = price.ToString("N0");
                         hfUnitPrice.Value = price.ToString("0");
 
-                        string hostName = rd["HostName"] != DBNull.Value ? rd["HostName"].ToString() : "Đỗ Đức Minh";
-                        string hostPhone = rd["HostPhone"] != DBNull.Value ? rd["HostPhone"].ToString() : "089459717";
-                        string hostEmail = rd["HostEmail"] != DBNull.Value ? rd["HostEmail"].ToString() : "minh@gmail.com";
+                        string hostName = rd["HostName"] != DBNull.Value ? rd["HostName"].ToString() : "Chủ Nhà";
+                        string hostPhone = rd["HostPhone"] != DBNull.Value ? rd["HostPhone"].ToString() : "0774397225";
+                        string hostEmail = rd["HostEmail"] != DBNull.Value ? rd["HostEmail"].ToString() : "host@gmail.com";
                         lblHostName.Text = hostName;
                         lblHostContact.Text = $"{hostPhone} / {hostEmail}";
 
@@ -82,12 +82,104 @@ namespace BTL_Web
                             svgHeart.Attributes["stroke"] = "#E57373";
                         }
                     }
+                    rd.Close();
+
+                    // Cập nhật huy hiệu trạng thái thực tế của phòng
+                    CapNhatHuyHieuTrangThaiPhong(conn, roomId);
                 }
                 catch { }
             }
         }
 
-        // Chặn kiểm tra tình trạng phòng nếu chưa đăng nhập
+        // Hiển thị chính xác trạng thái phòng (Đã có lịch đặt hôm nay / Sắp có lịch / Đang trống)
+        private void CapNhatHuyHieuTrangThaiPhong(SqlConnection conn, int roomId)
+        {
+            // Kiểm tra xem hôm nay phòng có đang có khách ở/đặt không
+            string sqlToday = @"
+                SELECT TOP 1 CheckInDate, CheckOutDate 
+                FROM Bookings 
+                WHERE RoomID = @RoomID 
+                  AND Status IN ('Pending', 'Unpaid', 'Confirmed')
+                  AND CAST(GETDATE() AS DATE) >= CheckInDate 
+                  AND CAST(GETDATE() AS DATE) < CheckOutDate";
+            SqlCommand cmdToday = new SqlCommand(sqlToday, conn);
+            cmdToday.Parameters.AddWithValue("@RoomID", roomId);
+
+            using (SqlDataReader rd = cmdToday.ExecuteReader())
+            {
+                if (rd.Read())
+                {
+                    DateTime outDate = Convert.ToDateTime(rd["CheckOutDate"]);
+                    lblRoomStatusBadge.Text = $"🔴 Đã được đặt (đến {outDate:dd/MM})";
+                    lblRoomStatusBadge.Style["background-color"] = "#fdecea";
+                    lblRoomStatusBadge.Style["color"] = "#c80000";
+                    return;
+                }
+            }
+
+            // Kiểm tra xem sắp tới có lịch đặt nào chưa
+            string sqlUpcoming = @"
+                SELECT TOP 1 CheckInDate, CheckOutDate 
+                FROM Bookings 
+                WHERE RoomID = @RoomID 
+                  AND Status IN ('Pending', 'Unpaid', 'Confirmed')
+                  AND CheckInDate > CAST(GETDATE() AS DATE)
+                ORDER BY CheckInDate ASC";
+            SqlCommand cmdUp = new SqlCommand(sqlUpcoming, conn);
+            cmdUp.Parameters.AddWithValue("@RoomID", roomId);
+
+            using (SqlDataReader rdUp = cmdUp.ExecuteReader())
+            {
+                if (rdUp.Read())
+                {
+                    DateTime inDate = Convert.ToDateTime(rdUp["CheckInDate"]);
+                    DateTime outDate = Convert.ToDateTime(rdUp["CheckOutDate"]);
+                    lblRoomStatusBadge.Text = $"🟡 Trống hôm nay (Đã đặt {inDate:dd/MM} - {outDate:dd/MM})";
+                    lblRoomStatusBadge.Style["background-color"] = "#fff8e1";
+                    lblRoomStatusBadge.Style["color"] = "#b26a00";
+                    return;
+                }
+            }
+
+            lblRoomStatusBadge.Text = "🟢 Đang trống";
+            lblRoomStatusBadge.Style["background-color"] = "#e8f5e9";
+            lblRoomStatusBadge.Style["color"] = "#1e7e34";
+        }
+
+        // Hàm kiểm tra trùng lịch dùng chung cho cả nút Kiểm tra và nút Đặt phòng
+        private bool KiemTraPhongTrongTheoNgay(int roomId, DateTime checkIn, DateTime checkOut, out string conflictInfo)
+        {
+            conflictInfo = "";
+            using (SqlConnection conn = new SqlConnection(strCon))
+            {
+                string query = @"
+                    SELECT TOP 1 CheckInDate, CheckOutDate 
+                    FROM Bookings 
+                    WHERE RoomID = @RoomID 
+                      AND Status IN ('Pending', 'Unpaid', 'Confirmed')
+                      AND (@CheckIn < CheckOutDate AND @CheckOut > CheckInDate)";
+
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@RoomID", roomId);
+                cmd.Parameters.AddWithValue("@CheckIn", checkIn.Date);
+                cmd.Parameters.AddWithValue("@CheckOut", checkOut.Date);
+
+                conn.Open();
+                using (SqlDataReader rd = cmd.ExecuteReader())
+                {
+                    if (rd.Read())
+                    {
+                        DateTime cIn = Convert.ToDateTime(rd["CheckInDate"]);
+                        DateTime cOut = Convert.ToDateTime(rd["CheckOutDate"]);
+                        conflictInfo = $"Rất tiếc! Phòng đã có khách đặt từ ngày {cIn:dd/MM/yyyy} đến {cOut:dd/MM/yyyy}. Vui lòng chọn ngày khác!";
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Kiểm tra tình trạng phòng
         protected void btnKiemTraPhong_Click(object sender, EventArgs e)
         {
             if (Session["UserID"] == null)
@@ -118,38 +210,18 @@ namespace BTL_Web
                 return;
             }
 
-            int roomId = 1;
-            if (ViewState["RoomID"] != null)
-                roomId = Convert.ToInt32(ViewState["RoomID"]);
-            else if (Request.QueryString["id"] != null)
-                int.TryParse(Request.QueryString["id"], out roomId);
+            int roomId = Convert.ToInt32(ViewState["RoomID"] ?? "1");
 
             try
             {
-                using (SqlConnection conn = new SqlConnection(strCon))
+                string conflictMsg;
+                if (!KiemTraPhongTrongTheoNgay(roomId, checkIn, checkOut, out conflictMsg))
                 {
-                    string query = @"
-                        SELECT COUNT(*) FROM Bookings 
-                        WHERE RoomID = @RoomID 
-                          AND Status IN ('Pending', 'Unpaid', 'Confirmed')
-                          AND (@CheckIn < CheckOutDate AND @CheckOut > CheckInDate)";
-
-                    SqlCommand cmd = new SqlCommand(query, conn);
-                    cmd.Parameters.AddWithValue("@RoomID", roomId);
-                    cmd.Parameters.AddWithValue("@CheckIn", checkIn.Date);
-                    cmd.Parameters.AddWithValue("@CheckOut", checkOut.Date);
-
-                    conn.Open();
-                    int overlap = Convert.ToInt32(cmd.ExecuteScalar());
-
-                    if (overlap > 0)
-                    {
-                        lblStatusResult.Text = "Rất tiếc! Phòng đã có khách đặt trong khoảng thời gian này.";
-                    }
-                    else
-                    {
-                        lblStatusResult.Text = "Phòng hiện đang TRỐNG trong khoảng ngày bạn chọn. Bạn có thể đặt ngay!";
-                    }
+                    lblStatusResult.Text = conflictMsg;
+                }
+                else
+                {
+                    lblStatusResult.Text = "Phòng hiện đang TRỐNG trong khoảng ngày bạn chọn. Bạn có thể đặt ngay!";
                 }
             }
             catch (Exception ex)
@@ -160,7 +232,7 @@ namespace BTL_Web
             modalCheckStatus.Attributes["class"] = "modal-overlay active";
         }
 
-        // Chuyển sang giao diện thanh toán mã QR
+        // Chuyển sang giao diện thanh toán mã QR (có kiểm tra trống trước khi mở QR)
         protected void btnChonQR_Click(object sender, EventArgs e)
         {
             if (Session["UserID"] == null)
@@ -169,12 +241,19 @@ namespace BTL_Web
                 return;
             }
 
-            modalCheckStatus.Attributes["class"] = "modal-overlay";
-
-            decimal total = TinhTongTienServer();
             int roomId = Convert.ToInt32(ViewState["RoomID"]);
             DateTime checkIn = DateTime.Parse(txtCheckIn.Text);
+            DateTime checkOut = DateTime.Parse(txtCheckOut.Text);
 
+            string conflictMsg;
+            if (!KiemTraPhongTrongTheoNgay(roomId, checkIn, checkOut, out conflictMsg))
+            {
+                lblStatusResult.Text = conflictMsg;
+                modalCheckStatus.Attributes["class"] = "modal-overlay active";
+                return;
+            }
+
+            decimal total = TinhTongTienServer();
             lblQRTongTien.Text = total.ToString("N0") + " đ";
             lblQRNoiDung.Text = $"HG0{roomId} - {checkIn:dd/MM/yy}";
 
@@ -184,12 +263,24 @@ namespace BTL_Web
             pnlQRPayment.Visible = true;
         }
 
-        // Chuyển sang giao diện thanh toán trực tiếp
+        // Chuyển sang giao diện thanh toán trực tiếp (có kiểm tra trống trước khi mở)
         protected void btnChonDirect_Click(object sender, EventArgs e)
         {
             if (Session["UserID"] == null)
             {
                 Response.Redirect("Profile.aspx");
+                return;
+            }
+
+            int roomId = Convert.ToInt32(ViewState["RoomID"]);
+            DateTime checkIn = DateTime.Parse(txtCheckIn.Text);
+            DateTime checkOut = DateTime.Parse(txtCheckOut.Text);
+
+            string conflictMsg;
+            if (!KiemTraPhongTrongTheoNgay(roomId, checkIn, checkOut, out conflictMsg))
+            {
+                lblStatusResult.Text = conflictMsg;
+                modalCheckStatus.Attributes["class"] = "modal-overlay active";
                 return;
             }
 
@@ -215,10 +306,12 @@ namespace BTL_Web
         {
             if (Session["UserID"] == null) { Response.Redirect("Profile.aspx"); return; }
 
-            LuuDonDatPhong("QR", "Unpaid");
-            lblPendingMessage.Text = "Shop đang kiểm tra giao dịch của bạn. Vui lòng chờ xác nhận thanh toán";
-            pnlQRPayment.Visible = false;
-            pnlPendingConfirm.Visible = true;
+            if (LuuDonDatPhong("QR", "Unpaid"))
+            {
+                lblPendingMessage.Text = "Shop đang kiểm tra giao dịch của bạn. Vui lòng chờ xác nhận thanh toán";
+                pnlQRPayment.Visible = false;
+                pnlPendingConfirm.Visible = true;
+            }
         }
 
         // Hoàn tất đặt phòng thanh toán trực tiếp
@@ -226,10 +319,12 @@ namespace BTL_Web
         {
             if (Session["UserID"] == null) { Response.Redirect("Profile.aspx"); return; }
 
-            LuuDonDatPhong("Trực tiếp", "Pending");
-            lblPendingMessage.Text = "Shop đang kiểm tra đơn đặt hàng. Vui lòng chờ shop xác nhận";
-            pnlDirectPayment.Visible = false;
-            pnlPendingConfirm.Visible = true;
+            if (LuuDonDatPhong("Trực tiếp", "Pending"))
+            {
+                lblPendingMessage.Text = "Shop đang kiểm tra đơn đặt hàng. Vui lòng chờ shop xác nhận";
+                pnlDirectPayment.Visible = false;
+                pnlPendingConfirm.Visible = true;
+            }
         }
 
         private decimal TinhTongTienServer()
@@ -241,7 +336,7 @@ namespace BTL_Web
             return nights > 0 ? unitPrice * nights : 0;
         }
 
-        private void LuuDonDatPhong(string paymentMethod, string bookingStatus)
+        private bool LuuDonDatPhong(string paymentMethod, string bookingStatus)
         {
             int guestId = Convert.ToInt32(Session["UserID"]);
             int roomId = Convert.ToInt32(ViewState["RoomID"]);
@@ -252,13 +347,26 @@ namespace BTL_Web
             {
                 lblStatusResult.Text = "Ngày đặt phòng không hợp lệ hoặc đã ở trong quá khứ!";
                 modalCheckStatus.Attributes["class"] = "modal-overlay active";
-                return;
+                return false;
+            }
+
+            // Kiểm tra lần cuối ngay trước khi INSERT để chống đặt trùng
+            string conflictMsg;
+            if (!KiemTraPhongTrongTheoNgay(roomId, checkIn, checkOut, out conflictMsg))
+            {
+                lblStatusResult.Text = conflictMsg;
+                modalCheckStatus.Attributes["class"] = "modal-overlay active";
+                btnQuayLaiForm_Click(null, null);
+                return false;
             }
 
             decimal totalPrice = TinhTongTienServer();
 
             using (SqlConnection conn = new SqlConnection(strCon))
             {
+                conn.Open();
+
+                // 1. Lưu đơn vào bảng Bookings
                 string sql = @"INSERT INTO Bookings (RoomID, GuestID, CheckInDate, CheckOutDate, TotalPrice, Status, PaymentMethod, CreatedAt)
                                VALUES (@RoomID, @GuestID, @CheckIn, @CheckOut, @Total, @Status, @PayMethod, GETDATE())";
                 SqlCommand cmd = new SqlCommand(sql, conn);
@@ -269,13 +377,24 @@ namespace BTL_Web
                 cmd.Parameters.AddWithValue("@Total", totalPrice);
                 cmd.Parameters.AddWithValue("@Status", bookingStatus);
                 cmd.Parameters.AddWithValue("@PayMethod", paymentMethod);
-
-                conn.Open();
                 cmd.ExecuteNonQuery();
+
+                // 2. Đồng bộ trạng thái phòng trong bảng Rooms nếu ngày đặt bao gồm hôm nay
+                if (DateTime.Today >= checkIn.Date && DateTime.Today < checkOut.Date)
+                {
+                    SqlCommand cmdRoom = new SqlCommand("UPDATE Rooms SET Status = 'Booked' WHERE RoomID = @RoomID", conn);
+                    cmdRoom.Parameters.AddWithValue("@RoomID", roomId);
+                    cmdRoom.ExecuteNonQuery();
+                }
+
+                // 3. Cập nhật ngay nhãn trạng thái phòng trên giao diện
+                CapNhatHuyHieuTrangThaiPhong(conn, roomId);
             }
+
+            return true;
         }
 
-        // Chặn thả tim nếu chưa đăng nhập
+        // Thả tim / Bỏ tim
         protected void btnHeartDetail_Click(object sender, EventArgs e)
         {
             if (Session["UserID"] == null)

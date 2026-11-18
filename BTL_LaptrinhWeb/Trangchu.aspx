@@ -89,8 +89,9 @@
                     <% }
                         else
                         { %>
-                    <a href="DangKyHost.aspx" class="popover-menu-row" style="color: #d66b76; font-weight: 500;">
-                        <span>🏠 Đăng ký làm Host</span>
+                    <a href="HostDashboard.aspx?tab=rooms" class="popover-menu-row" style="color: #d66b76; font-weight: 600;"
+                        onclick="return confirm('Chuyển sang chế độ Chủ phòng (Host) ngay bây giờ?');">
+                        <span>🏠 Chuyển sang chế độ Host</span>
                     </a>
                     <% } %>
 
@@ -281,19 +282,69 @@
 
             <div class="footer-center">
                 <div class="footer-links">
-                    <a href="#">Giới thiệu</a>
-                    <span>|</span>
-                    <a href="#">Điều khoản</a>
-                    <span>|</span>
-                    <a href="#">Liên hệ</a>
-                    <span>|</span>
-                    <a href="#">Chính sách</a>
+                    <a href="javascript:void(0)" onclick="openFooterInfo('about')">Giới thiệu</a> |
+                    <a href="javascript:void(0)" onclick="openFooterInfo('terms')">Điều khoản</a> |
+                    <a href="javascript:void(0)" onclick="openFooterInfo('contact')">Liên hệ</a> |
+                    <a href="javascript:void(0)" onclick="openFooterInfo('policy')">Chính sách</a>
                 </div>
                 <div class="copyright">copyright@HanoiStayNest.com</div>
             </div>
         </footer>
 
         <script>
+            function removeVietnameseTones(str) {
+                return str.normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+                    .toLowerCase()
+                    .trim();
+            }
+
+            function filterDiaDiem() {
+                var input = document.getElementById('<%= txtDiaDiem.ClientID %>');
+                var menu = document.getElementById('menuDiaDiem');
+                if (!input || !menu) return;
+
+                closeAllMenus();
+                menu.classList.add('show');
+
+                var keyword = removeVietnameseTones(input.value);
+                var rows = menu.querySelectorAll('.dropdown-item-row');
+                var visibleCount = 0;
+
+                rows.forEach(function (row, index) {
+                    if (index === 0) {
+                        row.style.display = (keyword === '') ? 'flex' : 'none';
+                        return;
+                    }
+
+                    var text = removeVietnameseTones(row.innerText || row.textContent);
+                    if (text.indexOf(keyword) > -1) {
+                        row.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                var emptyMsg = document.getElementById('noLocationMatch');
+                if (visibleCount === 0 && keyword !== '') {
+                    if (!emptyMsg) {
+                        emptyMsg = document.createElement('div');
+                        emptyMsg.id = 'noLocationMatch';
+                        emptyMsg.className = 'dropdown-item-row';
+                        emptyMsg.style.color = '#999999';
+                        emptyMsg.style.fontStyle = 'italic';
+                        emptyMsg.style.cursor = 'default';
+                        emptyMsg.innerText = 'Không tìm thấy khu vực phù hợp...';
+                        menu.appendChild(emptyMsg);
+                    }
+                    emptyMsg.style.display = 'flex';
+                } else if (emptyMsg) {
+                    emptyMsg.style.display = 'none';
+                }
+            }
+
             function toggleMenu(menuId) {
                 event.stopPropagation();
                 var menu = document.getElementById(menuId);
@@ -301,6 +352,9 @@
                 closeAllMenus();
                 if (!isShow) {
                     menu.classList.add('show');
+                    if (menuId === 'menuDiaDiem') {
+                        filterDiaDiem();
+                    }
                 }
             }
 
@@ -322,10 +376,20 @@
                 menus.forEach(function (m) { m.classList.remove('show'); });
             }
 
+            document.addEventListener('DOMContentLoaded', function () {
+                var txtDiaDiem = document.getElementById('<%= txtDiaDiem.ClientID %>');
+                if (txtDiaDiem) {
+                    txtDiaDiem.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                    });
+                }
+            });
+
             document.addEventListener('click', function () {
                 closeAllMenus();
             });
         </script>
+
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 const grid = document.querySelector(".room-grid");
@@ -333,7 +397,7 @@
                 if (!grid || !dotsContainer) return;
 
                 const cards = Array.from(grid.querySelectorAll(".room-card"));
-                const perPage = 6; // Hiển thị 6 phòng (2 hàng x 3 cột) mỗi trang
+                const perPage = 6;
                 const totalPages = Math.max(1, Math.ceil(cards.length / perPage));
                 let currentPage = 0;
                 let autoSlideTimer;
@@ -394,6 +458,7 @@
                 grid.addEventListener("mouseleave", startAutoSlide);
             });
         </script>
+
         <script>
             function toggleAccountMenu(event) {
                 event.stopPropagation();
@@ -409,109 +474,42 @@
                 }
             });
         </script>
+        <!-- MODAL THÔNG TIN FOOTER -->
+        <div id="footerInfoModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 99999; align-items: center; justify-content: center;" onclick="if(event.target===this) this.style.display='none'">
+            <div style="background: #fff; max-width: 480px; width: 90%; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); position: relative;">
+                <button type="button" onclick="document.getElementById('footerInfoModal').style.display='none'"
+                    style="position: absolute; right: 16px; top: 14px; border: none; background: none; font-size: 22px; cursor: pointer; color: #666;">
+                    ×
+                </button>
+                <h3 id="footerModalTitle" style="color: #d66b76; margin: 0 0 12px 0; font-size: 19px;"></h3>
+                <p id="footerModalBody" style="color: #444; font-size: 14.5px; line-height: 1.6; margin: 0;"></p>
+            </div>
+        </div>
+
         <script>
-            // Hàm chuyển tiếng Việt có dấu thành không dấu để tìm kiếm thông minh
-            function removeVietnameseTones(str) {
-                return str.normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .replace(/đ/g, 'd').replace(/Đ/g, 'D')
-                    .toLowerCase()
-                    .trim();
-            }
-
-            // Lọc danh sách gợi ý ngay khi gõ phím
-            function filterDiaDiem() {
-                var input = document.getElementById('<%= txtDiaDiem.ClientID %>');
-                var menu = document.getElementById('menuDiaDiem');
-                if (!input || !menu) return;
-
-                // Mở menu gợi ý ngay khi đang gõ
-                closeAllMenus();
-                menu.classList.add('show');
-
-                var keyword = removeVietnameseTones(input.value);
-                var rows = menu.querySelectorAll('.dropdown-item-row');
-                var visibleCount = 0;
-
-                rows.forEach(function (row, index) {
-                    // Dòng đầu tiên là "Tất cả khu vực Hà Nội" -> chỉ hiện khi ô nhập trống
-                    if (index === 0) {
-                        row.style.display = (keyword === '') ? 'flex' : 'none';
-                        return;
+            function openFooterInfo(type) {
+                const data = {
+                    about: {
+                        title: "Giới thiệu Hanoi Stay Nest",
+                        body: "Hanoi Stay Nest là nền tảng kết nối khách du lịch với các căn hộ, homestay chất lượng tại trung tâm Hà Nội, hỗ trợ đặt phòng nhanh chóng và minh bạch."
+                    },
+                    terms: {
+                        title: "Điều khoản sử dụng",
+                        body: "Khách thuê cần cung cấp thông tin chính xác khi đặt phòng và tuân thủ nội quy của chủ nhà. Chủ phòng cam kết hình ảnh và giá niêm yết đúng thực tế."
+                    },
+                    contact: {
+                        title: "Thông tin liên hệ",
+                        body: "Hotline hỗ trợ: 1900 6868 | Email: support@hanoistaynest.com | Địa chỉ: Quận Hoàn Kiếm, Hà Nội."
+                    },
+                    policy: {
+                        title: "Chính sách bảo mật & Hoàn hủy",
+                        body: "Thông tin cá nhân của khách hàng được bảo mật tuyệt đối. Hỗ trợ hủy miễn phí trước 24 giờ so với thời điểm nhận phòng."
                     }
-
-                    var text = removeVietnameseTones(row.innerText || row.textContent);
-                    if (text.indexOf(keyword) > -1) {
-                        row.style.display = 'flex';
-                        visibleCount++;
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
-
-                // Hiển thị thông báo nhỏ nếu không có khu vực nào khớp
-                var emptyMsg = document.getElementById('noLocationMatch');
-                if (visibleCount === 0 && keyword !== '') {
-                    if (!emptyMsg) {
-                        emptyMsg = document.createElement('div');
-                        emptyMsg.id = 'noLocationMatch';
-                        emptyMsg.className = 'dropdown-item-row';
-                        emptyMsg.style.color = '#999999';
-                        emptyMsg.style.fontStyle = 'italic';
-                        emptyMsg.style.cursor = 'default';
-                        emptyMsg.innerText = 'Không tìm thấy khu vực phù hợp...';
-                        menu.appendChild(emptyMsg);
-                    }
-                    emptyMsg.style.display = 'flex';
-                } else if (emptyMsg) {
-                    emptyMsg.style.display = 'none';
-                }
+                };
+                document.getElementById('footerModalTitle').innerText = data[type].title;
+                document.getElementById('footerModalBody').innerText = data[type].body;
+                document.getElementById('footerInfoModal').style.display = 'flex';
             }
-
-            function toggleMenu(menuId) {
-                event.stopPropagation();
-                var menu = document.getElementById(menuId);
-                var isShow = menu.classList.contains('show');
-                closeAllMenus();
-                if (!isShow) {
-                    menu.classList.add('show');
-                    if (menuId === 'menuDiaDiem') {
-                        filterDiaDiem(); // Cập nhật danh sách theo từ khóa hiện tại trong ô
-                    }
-                }
-            }
-
-            function chonDiaDiem(val) {
-                document.getElementById('<%= txtDiaDiem.ClientID %>').value = val;
-                closeAllMenus();
-                document.getElementById('<%= btnTimKiem.ClientID %>').click();
-            }
-
-            function chonSapXepGia(sortType, labelText) {
-                document.getElementById('<%= hfSapXepGia.ClientID %>').value = sortType;
-                document.getElementById('<%= txtHienThiGia.ClientID %>').value = labelText;
-                closeAllMenus();
-                document.getElementById('<%= btnTimKiem.ClientID %>').click();
-            }
-
-            function closeAllMenus() {
-                var menus = document.querySelectorAll('.custom-dropdown-menu');
-                menus.forEach(function (m) { m.classList.remove('show'); });
-            }
-
-            // Ngăn click bên trong ô input làm đóng menu gợi ý
-            document.addEventListener('DOMContentLoaded', function () {
-                var txtDiaDiem = document.getElementById('<%= txtDiaDiem.ClientID %>');
-        if (txtDiaDiem) {
-            txtDiaDiem.addEventListener('click', function (e) {
-                e.stopPropagation();
-            });
-        }
-    });
-
-            document.addEventListener('click', function () {
-                closeAllMenus();
-            });
         </script>
 
     </form>

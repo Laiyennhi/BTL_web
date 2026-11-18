@@ -6,14 +6,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chi tiết phòng | Hanoi Stay Nest</title>
-    <link rel="stylesheet" href="stylesheet/style.css?v=6" />
+    <link rel="stylesheet" href="stylesheet/style.css?v=7" />
 </head>
 <body>
     <form id="form1" runat="server" style="display: flex; flex-direction: column; min-height: 100vh;">
 
         <!-- HEADER ĐÃ ĐỒNG BỘ PHÂN QUYỀN -->
         <header>
-            <a href="Trangchu.aspx" class="logo-box">
+            <a href="TrangChu.aspx" class="logo-box">
                 <svg width="65" height="32" viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 30L40 8L70 30" stroke="#D68C94" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M22 25L45 14L62 28" stroke="#D68C94" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -24,7 +24,7 @@
             </a>
 
             <ul class="nav-menu">
-                <li><a href="Trangchu.aspx" class="active">Trang chủ</a></li>
+                <li><a href="TrangChu.aspx" class="active">Trang chủ</a></li>
                 <% if (Session["UserID"] != null) { %>
                     <li><a href="Favorites.aspx">Yêu Thích</a></li>
                     <li><a href="Bookings.aspx">Hoạt động</a></li>
@@ -81,8 +81,9 @@
                                 <span>🏠 Phòng của tôi</span>
                             </a>
                         <% } else { %>
-                            <a href="DangKyHost.aspx" class="popover-menu-row" style="color: #d66b76; font-weight: 500;">
-                                <span>🏠 Đăng ký làm Host</span>
+                            <a href="HostDashboard.aspx?tab=rooms" class="popover-menu-row" style="color: #d66b76; font-weight: 600;"
+                               onclick="return confirm('Chuyển sang chế độ Chủ phòng (Host) ngay bây giờ?');">
+                                <span>🏠 Chuyển sang chế độ Host</span>
                             </a>
                         <% } %>
 
@@ -115,12 +116,13 @@
                 Trang chủ / <asp:Label ID="lblDistrictTop" runat="server"></asp:Label> / <asp:Label ID="lblCodeTop" runat="server"></asp:Label>
             </div>
 
-            <!-- Tiêu đề + Nút thả tim -->
+            <!-- Tiêu đề + Trạng thái thực tế + Nút thả tim -->
             <div class="detail-header-row">
                 <div>
-                    <div class="detail-title">
-                        <asp:Label ID="lblTitle" runat="server"></asp:Label>
+                    <div class="detail-title" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <span><asp:Label ID="lblTitle" runat="server"></asp:Label></span>
                         <span class="detail-code-tag">#<asp:Label ID="lblCodeTag" runat="server"></asp:Label></span>
+                        <asp:Label ID="lblRoomStatusBadge" runat="server" style="font-size: 13px; padding: 4px 12px; border-radius: 14px; font-weight: 600;"></asp:Label>
                     </div>
                     <div class="detail-specs">
                         <asp:Label ID="lblSpecs" runat="server"></asp:Label>
@@ -260,7 +262,7 @@
                         <div style="font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 22px;">
                             <asp:Label ID="lblPendingMessage" runat="server"></asp:Label>
                         </div>
-                        <a href="Trangchu.aspx" class="btn-check-avail" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; width: 70%;">
+                        <a href="TrangChu.aspx" class="btn-check-avail" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; width: 70%;">
                             Về trang chủ
                         </a>
                     </asp:Panel>
@@ -302,7 +304,7 @@
 
         <!-- FOOTER -->
         <footer>
-            <a href="Trangchu.aspx" class="logo-box">
+            <a href="TrangChu.aspx" class="logo-box">
                 <svg width="65" height="32" viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 30L40 8L70 30" stroke="#D68C94" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M22 25L45 14L62 28" stroke="#D68C94" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -387,7 +389,6 @@
             }
 
             function moPopupThanhToan() {
-                // Nếu chưa đăng nhập -> đẩy thẳng sang trang Đăng nhập (Profile.aspx)
                 if (!isLoggedIn) {
                     window.location.href = 'Profile.aspx';
                     return;

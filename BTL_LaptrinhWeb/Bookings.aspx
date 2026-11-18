@@ -5,14 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hoạt động | Hanoi Stay Nest</title>
-    <link rel="stylesheet" href="stylesheet/style.css?v=6" />
+    <link rel="stylesheet" href="stylesheet/style.css?v=7" />
 </head>
 <body>
     <form id="form1" runat="server" style="display: flex; flex-direction: column; min-height: 100vh;">
 
         <!-- HEADER ĐÃ ĐỒNG BỘ POPOVER MENU 3 VAI TRÒ -->
         <header>
-            <a href="Trangchu.aspx" class="logo-box">
+            <a href="TrangChu.aspx" class="logo-box">
                 <svg width="65" height="32" viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 30L40 8L70 30" stroke="#D68C94" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M22 25L45 14L62 28" stroke="#D68C94" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -23,7 +23,7 @@
             </a>
 
             <ul class="nav-menu">
-                <li><a href="Trangchu.aspx">Trang chủ</a></li>
+                <li><a href="TrangChu.aspx">Trang chủ</a></li>
                 <li><a href="Favorites.aspx">Yêu Thích</a></li>
                 <li><a href="Bookings.aspx" class="active">Hoạt động</a></li>
             </ul>
@@ -75,8 +75,9 @@
                                 <span>🏠 Phòng của tôi</span>
                             </a>
                         <% } else { %>
-                            <a href="DangKyHost.aspx" class="popover-menu-row" style="color: #d66b76; font-weight: 500;">
-                                <span>🏠 Đăng ký làm Host</span>
+                            <a href="HostDashboard.aspx?tab=rooms" class="popover-menu-row" style="color: #d66b76; font-weight: 600;"
+                               onclick="return confirm('Chuyển sang chế độ Chủ phòng (Host) ngay bây giờ?');">
+                                <span>🏠 Chuyển sang chế độ Host</span>
                             </a>
                         <% } %>
 
@@ -213,7 +214,7 @@
                             <div style="font-size: 12px; color: #555; line-height: 1.5; margin-bottom: 14px;">
                                 Shop đang kiểm tra giao dịch của bạn. Vui lòng chờ xác nhận thanh toán
                             </div>
-                            <a href="Trangchu.aspx" class="btn-qr-pink">Về trang chủ</a>
+                            <a href="TrangChu.aspx" class="btn-qr-pink">Về trang chủ</a>
                         </asp:Panel>
 
                     </div>
@@ -224,7 +225,7 @@
 
         <!-- FOOTER -->
         <footer>
-            <a href="Trangchu.aspx" class="logo-box">
+            <a href="TrangChu.aspx" class="logo-box">
                 <svg width="65" height="32" viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 30L40 8L70 30" stroke="#D68C94" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M22 25L45 14L62 28" stroke="#D68C94" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -249,18 +250,18 @@
         </footer>
 
         <script>
-function toggleAccountMenu(event) {
-    event.stopPropagation();
-    var menu = document.getElementById("accountPopover");
-    if (menu) menu.classList.toggle("show");
-}
+            function toggleAccountMenu(event) {
+                event.stopPropagation();
+                var menu = document.getElementById("accountPopover");
+                if (menu) menu.classList.toggle("show");
+            }
 
-document.addEventListener("click", function(e) {
-    var menu = document.getElementById("accountPopover");
-    var wrapper = document.querySelector(".avatar-menu-wrapper");
-    if (menu && wrapper && !wrapper.contains(e.target)) {
-        menu.classList.remove("show");
-    }
+            document.addEventListener("click", function (e) {
+                var menu = document.getElementById("accountPopover");
+                var wrapper = document.querySelector(".avatar-menu-wrapper");
+                if (menu && wrapper && !wrapper.contains(e.target)) {
+                    menu.classList.remove("show");
+                }
             });
         </script>
 
